@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  name          String
+  passwordHash  String
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  bookings      Booking[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Space {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @unique
+  description  String
+  type         SpaceType
+  capacity     Int
+  pricePerHour Int
+  imageUrl     String
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  bookings     Booking[]
+}
+
+model Booking {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @db.Uuid
+  spaceId     String        @db.Uuid
+  startAt     DateTime      @db.Timestamptz(3)
+  endAt       DateTime      @db.Timestamptz(3)
+  hours       Int
+  totalPrice  Int
+  status      BookingStatus @default(CONFIRMED)
+  cancelledAt DateTime?     @db.Timestamptz(3)
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  space       Space         @relation(fields: [spaceId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@index([spaceId, startAt])
+  @@index([userId, status, startAt])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SpaceType {
+  DESK
+  MEETING_ROOM
+  BOOTH
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}

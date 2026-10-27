@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CoSpace
 
-## Getting Started
+Plataforma fullstack para explorar escritorios, salas de reuniones y cabinas de coworking, reservar por horas y administrar el catálogo. Usa Next.js 16 App Router, TypeScript, Prisma y PostgreSQL.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 22 LTS y npm 10 o superior.
+- Una base PostgreSQL en Supabase.
+- Docker Engine/Desktop solo para la ejecución contenerizada.
+- Git para clonar el repositorio.
+
+## Configuración
+
+1. Clona el repositorio e instala dependencias:
+
+   ```bash
+   git clone <URL_DEL_REPOSITORIO>
+   cd cospace
+   npm ci
+   ```
+
+2. Crea el archivo local de variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Completa `.env`:
+
+| Variable | Uso y valor |
+| --- | --- |
+| `DATABASE_URL` | Conexión de ejecución a PostgreSQL. En Supabase, usa **Connect > Transaction pooler** (normalmente puerto `6543`) y conserva los parámetros indicados por Supabase. |
+| `DIRECT_URL` | Conexión directa o session pooler para migraciones Prisma. Copia la cadena correspondiente desde **Connect** en Supabase; normalmente usa puerto `5432`. |
+| `JWT_ACCESS_SECRET` | Secreto de firma del access token, mínimo 32 caracteres. Genera uno con `openssl rand -base64 48`. |
+| `JWT_REFRESH_SECRET` | Secreto independiente para refresh tokens; genera otro con `openssl rand -base64 48`. |
+| `ACCESS_TOKEN_EXPIRES_IN` | Vigencia del access token; formato admitido, por ejemplo `15m`. |
+| `REFRESH_TOKEN_EXPIRES_IN` | Vigencia del refresh token; formato admitido, por ejemplo `7d`. |
+| `SEED_ADMIN_EMAIL` | Correo opcional del administrador de seed. Por defecto: `admin@cospace.local`. |
+| `SEED_ADMIN_PASSWORD` | Contraseña opcional del administrador de seed. Por defecto: `Admin12345!`; reemplázala antes de sembrar en cualquier entorno compartido. |
+
+No publiques `.env` ni copies sus valores en el repositorio. Usa secretos distintos para cada entorno.
+
+## Desarrollo
+
+Después de configurar Supabase y `.env`, ejecuta en este orden:
 
 ```bash
+npm run db:generate
+npm run db:deploy
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre <http://localhost:3000>. Para crear una migración durante desarrollo local usa `npm run db:migrate`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+El seed crea estos usuarios si todavía no existen:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Administrador: `admin@cospace.local` / `Admin12345!` (o los valores `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` configurados).
+- Usuario demo: `user@cospace.local` / `User12345!`.
 
-## Learn More
+Cambia las contraseñas demo en cualquier entorno accesible públicamente.
 
-To learn more about Next.js, take a look at the following resources:
+## Docker
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Primero configura `.env`, aplica migraciones y seed con los comandos anteriores. Luego construye y ejecuta:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+docker build -t cospace .
+docker run --rm --name cospace --env-file .env -p 3000:3000 cospace
+```
 
-## Deploy on Vercel
+Abre <http://localhost:3000>. El contenedor requiere `DATABASE_URL`, `DIRECT_URL` y los secretos JWT. No incluyas `.env` dentro de la imagen.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Script | Descripción |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo Next.js. |
+| `npm run build` | Compila la aplicación para producción. |
+| `npm run start` | Ejecuta el build de producción. |
+| `npm run lint` | Ejecuta ESLint. |
+| `npm run db:generate` | Genera el cliente Prisma. |
+| `npm run db:migrate` | Crea/aplica migraciones en desarrollo. |
+| `npm run db:deploy` | Aplica migraciones existentes en un entorno desplegado. |
+| `npm run db:seed` | Inserta usuarios demo y espacios de ejemplo. |
+| `npm run db:studio` | Abre Prisma Studio. |
+
+Las pruebas se ejecutan con `npx vitest run`.
+
+## Estructura
+
+- `src/app`: páginas App Router y route handlers bajo `api/`.
+- `src/components`: formularios, tarjetas y vistas interactivas compartidas.
+- `src/services`: reglas de negocio y clientes HTTP del navegador.
+- `src/lib`: Prisma, autenticación, cookies y respuestas HTTP.
+- `src/validators`: esquemas Zod para entradas de API.
+- `prisma`: esquema, migraciones y seed.
+- `tests`: pruebas unitarias y de route handlers.
+
+## Despliegue
+
+La base de datos debe estar en Supabase y la aplicación puede desplegarse en Vercel. En Vercel, configura las mismas variables del apartado anterior y ejecuta las migraciones (`npm run db:deploy`) contra la base antes de probar la aplicación.
+
+**URL desplegada:** pendiente. Aún no se ha proporcionado una URL de Vercel para este proyecto.
