@@ -14,5 +14,3 @@ export default async function ReservationsPage() {
 
   redirect("/dashboard");
 }
-
-}
